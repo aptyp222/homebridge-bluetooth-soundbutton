@@ -3,7 +3,7 @@
 var debug = require('debug')('[Homebridge SoundButton] -  ');
 var Accessory, Service, Characteristic, UUIDGen, HAPServer;
 var accessories = [];
-var amixer = require('./lib/alsa.js')
+var amixer = require('./lib/alsa.js');
 const { spawn } = require('child_process');
 
 module.exports = function(homebridge) {
@@ -13,14 +13,14 @@ module.exports = function(homebridge) {
   UUIDGen = homebridge.hap.uuid;
   HAPServer = homebridge.hap.HAPServer;
   homebridge.registerPlatform("homebridge-sound-button", "SoundButton", SoundButtonPlatform);
-}
+};
 
 function SoundButtonPlatform(log, config, api) {
   this.log = log;
   this.cache_timeout = 10; // seconds
   this.refresh = config['refresh'] || 10; // Update every 10 seconds
   this.debugging = config.debugging || false;
-  this.debugPrefix = config.debugPrefix || '~~~~~~!!!!~~~~~~ '
+  this.debugPrefix = config.debugPrefix || '~~~~~~!!!!~~~~~~ ';
   this.log.prefix = 'Homebridge Sound Button';
   this.alsaDebug = config.enableAlsaOutput || false;
   this.defaultSoundPlayer = config.defaultSoundPlayer || '';
@@ -53,8 +53,6 @@ SoundButtonPlatform.prototype.didFinishLaunching = function() {
   }
 };
 
-
-
 SoundButtonPlatform.prototype.loadSoundAccesories = function(callback) {
   this.pdebug('******* Loading accessories from config');
   var alength = this.configAccessories.length;
@@ -68,7 +66,6 @@ SoundButtonPlatform.prototype.loadSoundAccesories = function(callback) {
     }
   }
 };
-
 
 SoundButtonPlatform.prototype.configureAccessory = function(accessory) {
   var accessoryId = accessory.context.id;
@@ -107,8 +104,6 @@ SoundButtonPlatform.prototype.configureAccessory = function(accessory) {
     this.removeAccessory(accessory);
   }
 };
-
-
 
 SoundButtonPlatform.prototype.addAccessory = function(data) {
   // this.pdebug(accessories);
@@ -149,9 +144,7 @@ SoundButtonPlatform.prototype.addAccessory = function(data) {
     this.api.registerPlatformAccessories("homebridge-sound-button", "SoundButton", [accessory]);
     accessories[data.id] = accessory;
   }
-
 };
-
 
 SoundButtonPlatform.prototype.setPowerState = function(thisPlug, powerState, callback) {
 
@@ -167,7 +160,7 @@ SoundButtonPlatform.prototype.setPowerState = function(thisPlug, powerState, cal
     }
 
     if(_playerSoundOptions.indexOf(thisPlug.soundFile) === -1) {
-	_playerSoundOptions.push(thisPlug.soundFile);
+      _playerSoundOptions.push(thisPlug.soundFile);
     }
 
     var playerSoundPlayer = this.defaultSoundPlayer;
@@ -189,106 +182,4 @@ SoundButtonPlatform.prototype.setPowerState = function(thisPlug, powerState, cal
 
       this.pdebug('******* Launching PID .... ' + thisPlug.playProcess.pid);
 
-      this.pdebug(JSON.stringify(thisPlug.playProcess.spawnargs, null, 4));
-    }
-
-    thisPlug.playProcess.stdout.on('data', (data) => {
-      this.pdebug(`stdout: ${data}`);
-    });
-
-    thisPlug.playProcess.stderr.on('data', (data) => {
-      this.pdebug(`stderr: ${data}`);
-    });
-
-    thisPlug.playProcess.on('close', (code) => {
-      this.pdebug(`child process exited with code ${code}`);
-      // Turn switch off after completion.
-      var accessory = accessories[thisPlug.id];
-      accessory.getService(Service.Switch).getCharacteristic(Characteristic.On).updateValue(false);
-      delete thisPlug.playProcess;
-      thisPlug.playProcess = null; // If not...
-      thisPlug.isPlaying = false;
-    });
-
-    callback();
-
-  } else {
-
-    this.log('******* Stopping Sound.... ' + thisPlug.soundFile);
-
-    thisPlug.isPlaying = false;
-
-    if(thisPlug.playProcess) {
-      if(this.debugging === true) {
-        this.pdebug('******* Kill State .... ' + thisPlug.playProcess.killed);
-        this.pdebug('******* Exit Code .... ' + thisPlug.playProcess.exitCode);
-      }
-
-      if(thisPlug.playProcess.killed === false) {
-        // thisPlug.playProcess.kill('SIGHUP');
-        // thisPlug.playProcess.kill('SIGINT');
-        thisPlug.playProcess.kill('SIGTERM');
-
-        if(this.debugging === true) {
-          this.pdebug('******* Killing PID .... ' + thisPlug.playProcess.pid);
-          this.pdebug('******* Kill State .... ' + thisPlug.playProcess.killed);
-          this.pdebug('******* Exit Code .... ' + thisPlug.playProcess.exitCode);
-        }
-
-        thisPlug.playProcess = null;
-        callback();
-        return;
-      }
-
-      if(thisPlug.playProcess.killed !== 1 && thisPlug.playProcess.exitCode === 0) {
-        this.log('******* Exit Kill PID .... ' + thisPlug.playProcess.pid);
-
-        // thisPlug.playProcess.kill('SIGHUP');
-        // thisPlug.playProcess.kill('SIGINT');
-        thisPlug.playProcess.kill('SIGTERM');
-
-        if(this.debugging === true) {
-          this.pdebug('******* Kill State .... ' + thisPlug.playProcess.killed);
-          this.pdebug('******* Exit Code .... ' + thisPlug.playProcess.exitCode);
-        }
-
-        thisPlug.playProcess = null;
-        callback();
-      }
-      // delete thisPlug.playProcess;
-    } else {
-      callback();
-    }
-  }
-};
-
-SoundButtonPlatform.prototype.setService = function(accessory) {
-  accessory.getService(Service.Switch)
-    .getCharacteristic(Characteristic.On)
-    .on('set', this.setPowerState.bind(this, accessory.context));
-  accessory.on('identify', this.identify.bind(this, accessory.context));
-};
-
-SoundButtonPlatform.prototype.identify = function(thisPlug, paired, callback) {
-  this.log("******* Identify requested for " + thisPlug.id, thisPlug.name);
-  if (accessories[thisPlug.id]) {
-
-  }
-
-  callback();
-};
-
-SoundButtonPlatform.prototype.removeAccessory = function(accessory) {
-  if (accessory) {
-    var id = accessory.context.id;
-    this.log("******* Removing Sound Button: " + accessory.context.name);
-    this.api.unregisterPlatformAccessories("homebridge-sound-button", "SoundButton", [accessory]);
-    delete accessories[id];
-  }
-};
-
-SoundButtonPlatform.prototype.pdebug = function(args) {
-  if(this.debugging === true) {
-    debug(this.debugPrefix, args);
-  }
-};
+      this.pdebug(JSON.stringify(this
